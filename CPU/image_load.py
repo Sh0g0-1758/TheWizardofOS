@@ -34,4 +34,3 @@ def image_processing_pytorch():
     resampled_img = resample(img.clone())
     processed_images["resampled"] = resampled_img
     return processed_images
-image_processing_pytorch()
