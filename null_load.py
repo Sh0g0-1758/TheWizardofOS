@@ -20,7 +20,7 @@ def check_running_processes():
         cpu_times = proc.cpu_times()
         burst_time = cpu_times.system + cpu_times.user
         memory_info = proc.memory_full_info()
-
+        
         # Collect available memory information
         rss = memory_info.rss  # Resident Set Size
         vms = memory_info.vms  # Virtual Memory Size
