@@ -1,8 +1,11 @@
 import torch
 import torchvision.transforms as transforms
+import io
+from PIL import Image
 
-def image_processing_pytorch():
+def image_processing():
     image_size = torch.randint(128, 512, (1,)).item()
+    
     # Generate a random image tensor (assuming grayscale for simplicity)
     img = torch.randint(0, 256, size=(1, image_size, image_size), dtype=torch.float32)
 
@@ -33,4 +36,19 @@ def image_processing_pytorch():
     resample = transforms.Resize((256, 256))
     resampled_img = resample(img.clone())
     processed_images["resampled"] = resampled_img
+
+    # Image compression
+    def compress_image(image_tensor, quality=10):
+        img_pil = transforms.ToPILImage()(image_tensor.cpu().detach().squeeze())
+        img_byte_arr = io.BytesIO()
+        img_pil.save(img_byte_arr, format='JPEG', quality=quality)
+        img_byte_arr = img_byte_arr.getvalue()
+        img_reconstructed = Image.open(io.BytesIO(img_byte_arr))
+        img_tensor = transforms.ToTensor()(img_reconstructed)
+        return img_tensor
+
+    compressed_img = compress_image(img, quality=10)
+    processed_images["compressed"] = compressed_img
+
     return processed_images
+
