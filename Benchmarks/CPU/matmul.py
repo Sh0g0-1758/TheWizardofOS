@@ -11,13 +11,6 @@ def generate_random_matrices(size_range=(10,1000)):
   Returns:
       A tuple containing two randomly generated NumPy arrays (matrix_a, matrix_b).
   """
-  # Data to be written to the file
-  data = "Hello, this is some data to be written to a text file."
-  # Open a file in write mode
-  with open("output.txt", "w") as file:
-      # Write the data to the file
-      file.write(data)
-  print("Data has been written to output.txt")
   min_size, max_size = size_range
   rows_a, cols_a = np.random.randint(min_size, max_size + 1, size=2)
   cols_b = np.random.randint(min_size, max_size + 1)
@@ -30,3 +23,5 @@ def multiply_load():
   matrix_a, matrix_b = generate_random_matrices()
   result_matrix = np.matmul(matrix_a, matrix_b)
   return result_matrix
+
+print(multiply_load())
