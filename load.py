@@ -5,19 +5,19 @@ import csv
 import socket
 import time
 
-proc = psutil.Popen("./Benchmarks/Image/build/DisplayImage")
+proc = psutil.Popen("./Benchmarks/CPU/sort")
 
 def check_running_processes():
     try:
       with proc.oneshot():
         cpu_times = proc.cpu_times()
         burst_time = cpu_times.system + cpu_times.user
-        memory_info = proc.memory_full_info()
+        memory_info =proc.memory_full_info()
         mem_percent = proc.memory_percent() 
         open_files = proc.open_files()
 
         rss = memory_info.rss  
-        vms = memory_info.vms  
+        vms =memory_info.vms  
         shared = memory_info.shared  
         text = memory_info.text  
         data = memory_info.data  
@@ -26,11 +26,11 @@ def check_running_processes():
                     "VMS memory", "Shared memory", "Text segment", "Data segment", "Library code", "Memory Percent", "IO Connections", "Open Files"]
         values = [proc.name(), burst_time, rss, vms, shared, text, data, lib, mem_percent, open_files]
 
-        with open("Data/CPU/matmul.csv", "a", newline="") as csvfile:  # Open in append mode
+        with open("Data/matmul.csv", "a", newline="") as csvfile:  # Open in append mode
             writer = csv.writer(csvfile)
 
             # Write header only if the file is empty
-            if os.stat("Data/CPU/matmul.csv").st_size == 0:
+            if os.stat("Data/matmul.csv").st_size == 0:
                 writer.writerow(fields)
 
             writer.writerow(values)
