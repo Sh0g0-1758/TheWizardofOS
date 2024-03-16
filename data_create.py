@@ -1,6 +1,6 @@
 import os
 import numpy as np
-for i in range(200):
+for i in range(1):
     if np.random.uniform() < 0.1:
         os.system("python null_load.py")
     else:

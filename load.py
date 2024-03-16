@@ -5,7 +5,7 @@ import csv
 import socket
 import time
 
-proc = psutil.Popen(["python", "Benchmarks/CPU/matmul.py"])
+proc = psutil.Popen("./Benchmarks/Image/build/DisplayImage")
 
 def check_running_processes():
     try:
