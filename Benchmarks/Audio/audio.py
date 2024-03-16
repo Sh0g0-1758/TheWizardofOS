@@ -25,3 +25,5 @@ def audio_load():
     # Play the melody.
     sd.play(melody, sample_rate)
     sd.wait()
+
+audio_load()
