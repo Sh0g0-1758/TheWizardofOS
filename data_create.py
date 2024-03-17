@@ -1,7 +1,9 @@
 import os
 import numpy as np
-for i in range(1):
-    if np.random.uniform() < 0.1:
-        os.system("python null_load.py")
-    else:
-        os.system("python load.py")
+from load import load
+for i in range(200):
+    load("./Benchmarks/CPU/ml.exe")
+    load("./Benchmarks/CPU/matmul.exe")
+    load("./Benchmarks/CPU/sort.exe")
+    load("./Benchmarks/IO/file.exe")
+

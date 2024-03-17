@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <algorithm>
 #include <random>
@@ -27,8 +28,23 @@ std::vector<int> sortingLoad(int maxSize = 10000) {
 
 int main() {
     std::vector<int> sortedData = sortingLoad();
-    
-   
-    
+
+    std::ofstream outfile("text_file.txt");
+    if (!outfile.is_open()) {
+        std::cerr << "Error creating file." << std::endl;
+        return 1;
+    }
+
+    for (int i = 0; i < sortedData.size(); ++i) {
+        outfile << sortedData[i] << std::endl;
+    }
+    outfile.close();
+
+    // Delete the file
+    if (std::remove("text_file.txt") != 0) {
+        std::cerr << "Error deleting file." << std::endl;
+        return 1;
+    }
+
     return 0;
 }

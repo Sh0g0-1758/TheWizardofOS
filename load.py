@@ -1,48 +1,67 @@
-import atexit
 import psutil
 import os
 import csv
 import socket
 import time
+import pandas as pd
+import numpy as np
 
-proc = psutil.Popen("./Benchmarks/CPU/sort")
+def load(path):
+    vals = { "CPU times":[], "RSS memory":[],"VMS memory":[], "Shared memory":[], "Text segment":[], 
+            "Data segment":[], "Library code":[], "Memory Percent":[]}
 
-def check_running_processes():
-    try:
-      with proc.oneshot():
-        cpu_times = proc.cpu_times()
-        burst_time = cpu_times.system + cpu_times.user
-        memory_info =proc.memory_full_info()
-        mem_percent = proc.memory_percent() 
-        open_files = proc.open_files()
 
-        rss = memory_info.rss  
-        vms =memory_info.vms  
-        shared = memory_info.shared  
-        text = memory_info.text  
-        data = memory_info.data  
-        lib = memory_info.lib
-        fields = ["Process Name", "CPU times", "RSS memory",
-                    "VMS memory", "Shared memory", "Text segment", "Data segment", "Library code", "Memory Percent", "IO Connections", "Open Files"]
-        values = [proc.name(), burst_time, rss, vms, shared, text, data, lib, mem_percent, open_files]
+    proc = psutil.Popen([path])
 
-        with open("Data/matmul.csv", "a", newline="") as csvfile:  # Open in append mode
-            writer = csv.writer(csvfile)
+    def check_running_processes():
+        try:
+            with proc.oneshot():
+                cpu_times = proc.cpu_times()
+                burst_time = cpu_times.system + cpu_times.user
+                memory_info = proc.memory_full_info()
+                mem_percent = proc.memory_percent() 
+                rss = memory_info.rss  
+                vms = memory_info.vms  
+                shared = memory_info.shared  
+                text = memory_info.text  
+                data = memory_info.data  
+                lib = memory_info.lib
 
-            # Write header only if the file is empty
-            if os.stat("Data/matmul.csv").st_size == 0:
-                writer.writerow(fields)
 
-            writer.writerow(values)
+                vals["CPU times"].append(burst_time)
+                vals["RSS memory"].append(rss)
+                vals["VMS memory"].append(vms)
+                vals["Shared memory"].append(shared)
+                vals["Text segment"].append(text)
+                vals["Data segment"].append(data)
+                vals["Library code"].append(lib)
+                vals["Memory Percent"].append(mem_percent)
+                
+        except Exception as e:
+            pass
 
-            print("Process information written to CSV.")
-        
-    except psutil.NoSuchProcess:
-        pass
+    while True:
+        time.sleep(1e-2)
+        check_running_processes()
+        retCode = proc.poll()
+        if retCode is not None:
+            break
 
-while True:
-    time.sleep(1e-2)
-    check_running_processes()
-    retCode = proc.poll()
-    if retCode is not None:
-        break
+    vals["CPU times"] = [vals["CPU times"][-1]]
+    vals["RSS memory"] = [sum(vals["RSS memory"])/len(vals["RSS memory"])]
+    vals["VMS memory"] = [sum(vals["VMS memory"])/len(vals["VMS memory"])]
+    vals["Shared memory"] = [sum(vals["Shared memory"])/len(vals["Shared memory"])]
+    vals["Text segment"] = [sum(vals["Text segment"])/len(vals["Text segment"])]
+    vals["Data segment"] = [sum(vals["Data segment"])/len(vals["Data segment"])]
+    vals["Library code"] = [sum(vals["Library code"])/len(vals["Library code"])]
+    vals["Memory Percent"] = [sum(vals["Memory Percent"])/len(vals["Memory Percent"])]
+
+    df = pd.DataFrame(vals)
+
+    with open("data.csv", "a", newline="") as csvfile:  
+        writer = csv.writer(csvfile)
+        fields = ["CPU times", "RSS memory", "VMS memory", "Shared memory", "Text segment", "Data segment", "Library code", "Memory Percent"]
+        if os.stat("data.csv").st_size == 0:
+            writer.writerow(fields)
+
+    df.to_csv("data.csv",mode="a", index=False,header=False)
