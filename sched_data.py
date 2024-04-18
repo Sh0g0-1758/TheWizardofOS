@@ -3,10 +3,12 @@ import pickle
 import pandas as pd
 import random
 import os
-def get_scheduler_data(num_proc = 10):
+
+
+def get_scheduler_data(num_proc=10):
     if os.path.exists("sched_data.csv"):
         os.remove("sched_data.csv")
-    df = {"actual_cpu_time":[], "predicted_cpu_time":[]}
+    df = {"actual_cpu_time": [], "predicted_cpu_time": []}
     for i in range(2*num_proc):
         if len(df["actual_cpu_time"]) == num_proc:
             break
@@ -20,8 +22,8 @@ def get_scheduler_data(num_proc = 10):
         proc_attr.drop(columns=["CPU times"], inplace=True)
         model = pickle.load(open('model.pkl', 'rb'))
         df["predicted_cpu_time"].append(model.predict(proc_attr)[0]*1000)
-        
-        
+
     pd.DataFrame(df).to_csv("sched_data.csv")
 
-get_scheduler_data()
+
+get_scheduler_data(100)
