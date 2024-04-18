@@ -10,60 +10,65 @@ from math import floor
 from typing import Callable, List
 
 import numpy
+import pandas as pd
 from sortedcontainers import SortedKeyList
 from tabulate import tabulate
 
-def cfs_schedule(tasks: List[dict], quantum: int):
+priority_to_weight = [
+    88761, 71755, 56483, 46273, 36291,
+    29154, 23254, 18705, 14949, 11916,
+    9548, 7620, 6100, 4904, 3906,
+    3121, 2501, 1991, 1586, 1277,
+    1024, 820, 655, 526, 423,
+    335, 272, 215, 172, 137,
+    110, 87, 70, 56, 45,
+    36, 29, 23, 18, 15,
+]
+
+Sum_Of_Weights = 445163
+
+def modified_cfs_schedule(tasks: List[dict], sched_latency: int, min_granularity=6):
     """
     Schedule tasks according to CFS algorithm and set waiting and turnaround times.
     """
 
     get_vruntime: Callable[[dict], int] = lambda task: task["vruntime"]
     get_nice: Callable[[dict], int] = lambda task: task["nice"]
-
+    global_timer = 0
     tasks_sorted = SortedKeyList(key=get_vruntime)
-    tasks_sorted.add(tasks[0])
-    end = 1
-    timer = tasks[0]["arrival_time"]
+    for i in tasks:
+        tasks_sorted.add(i)
     min_vruntime = 0
 
     while (num := len(tasks_sorted)) > 0:
-        # Add tasks that have arrived after previous iteration
-        for task in tasks[end:]:
-            if task["arrival_time"] <= timer:
-                task["waiting_time"] = timer - task["arrival_time"]
-                task["turnaround_time"] = task["waiting_time"]
-                task["vruntime"] = min_vruntime
-                tasks_sorted.add(task)
-                num += 1
-                end += 1
-
-        timeslice = floor(quantum / num)  # Dynamic timeslice
         min_task = tasks_sorted[0]
-
-        # Time remaining for smallest task
-        t_rem = min_task["burst_time"] - min_task["exec_time"]
-
-        # Time of execution of smallest task
-        time = min([timeslice, t_rem])
-        # if(t_rem-time<=0.5):
-        #     time=t_rem
         min_vruntime = get_vruntime(min_task)
         min_nice = get_nice(min_task)
+        # print(min_task)
 
-        # display_tasks(tasks_sorted)
-        # print(f'Executing task {min_task["pid"]} for {time} seconds\n')
+        timeslice = (priority_to_weight[min_nice] * sched_latency) / Sum_Of_Weights
+        if(timeslice < min_granularity):
+            timeslice = min_granularity 
+
+        t_rem = min_task["burst_time"] - min_task["exec_time"]
+        t_rem_pred = min_task["pred_burst_time"] - min_task["exec_time"]
+        if t_rem_pred <= t_rem and t_rem_pred > 0:
+            t_rem = t_rem_pred
+        # Time of execution of smallest task
+        time = min([timeslice, t_rem])
+        
+        global_timer += time
 
         # Execute process
-        vruntime = min_vruntime + time * min_nice
+        vruntime = min_vruntime + ((time * 1024) / priority_to_weight[min_nice])
         min_task["exec_time"] += time
         min_task["turnaround_time"] += time
-        timer += time
 
         # Increment waiting and turnaround time of all other processes
         for i in range(1, num):
-            tasks_sorted[i]["waiting_time"] += time
-            tasks_sorted[i]["turnaround_time"] += time
+            if(global_timer >= tasks_sorted[i]["arrival_time"]):
+                tasks_sorted[i]["waiting_time"] += time
+                tasks_sorted[i]["turnaround_time"] += time
 
         # Remove from sorted list and update vruntime
         task = tasks_sorted.pop(0)
@@ -72,6 +77,55 @@ def cfs_schedule(tasks: List[dict], quantum: int):
         # Insert only if execution time is left
         if min_task["exec_time"] < min_task["burst_time"]:
             tasks_sorted.add(task)
+
+def normal_cfs_schedule(tasks: List[dict], sched_latency: int, min_granularity=6):
+    """
+    Schedule tasks according to CFS algorithm and set waiting and turnaround times.
+    """
+
+    get_vruntime: Callable[[dict], int] = lambda task: task["vruntime"]
+    get_nice: Callable[[dict], int] = lambda task: task["nice"]
+    global_timer = 0
+    tasks_sorted = SortedKeyList(key=get_vruntime)
+    for i in tasks:
+        tasks_sorted.add(i)
+    min_vruntime = 0
+
+    while (num := len(tasks_sorted)) > 0:
+        min_task = tasks_sorted[0]
+        min_vruntime = get_vruntime(min_task)
+        min_nice = get_nice(min_task)
+        # print(min_task)
+
+        timeslice = (priority_to_weight[min_nice] * sched_latency) / Sum_Of_Weights
+        if(timeslice < min_granularity):
+            timeslice = min_granularity 
+
+        t_rem = min_task["burst_time"] - min_task["exec_time"]
+
+        # Time of execution of smallest task
+        time = min([timeslice, t_rem])
+        global_timer += time
+
+        # Execute process
+        vruntime = min_vruntime + ((time * 1024) / priority_to_weight[min_nice])
+        min_task["exec_time"] += time
+        min_task["turnaround_time"] += time
+
+        # Increment waiting and turnaround time of all other processes
+        for i in range(1, num):
+            if(global_timer >= tasks_sorted[i]["arrival_time"]):
+                tasks_sorted[i]["waiting_time"] += time
+                tasks_sorted[i]["turnaround_time"] += time
+
+        # Remove from sorted list and update vruntime
+        task = tasks_sorted.pop(0)
+        task["vruntime"] = vruntime
+
+        # Insert only if execution time is left
+        if min_task["exec_time"] < min_task["burst_time"]:
+            tasks_sorted.add(task)
+
 
 
 def display_tasks(tasks: List[dict]):
@@ -95,7 +149,7 @@ def display_tasks(tasks: List[dict]):
                 task["pid"],
                 f"{task['arrival_time'] / 1000}",
                 f"{task['burst_time'] / 1000}",
-                task["nice"],
+                task["nice"] - 20,
                 f"{task['waiting_time'] / 1000}",
                 f"{task['turnaround_time'] / 1000}",
             ]
@@ -124,23 +178,6 @@ def find_avg_time(tasks: List[dict]):
 
     print(f"\nAverage waiting time: {total_wt / (num * 1000): .3f} seconds")
     print(f"Average turnaround time: {total_tat / (num * 1000): .3f} seconds")
-    print(
-        "Standard deviation in waiting time: "
-        f"{numpy.std(waiting_times) / 1000: .3f} seconds"
-    )
-
-
-def reset_tasks(tasks: List[dict]):
-    """
-    Reset task execution details.
-    """
-
-    for task in tasks:
-        task["vruntime"] = 0
-        task["exec_time"] = 0
-        task["waiting_time"] = 0
-        task["turnaround_time"] = 0
-
 
 if __name__ == "__main__":
     MIN_VERSION = (3, 8)
@@ -150,46 +187,44 @@ if __name__ == "__main__":
             f'{".".join(str(n) for n in MIN_VERSION)}'
         )
 
-    QUANTUM = 5  # Time quantum in ms
-    MAX_ARRIVAL_TIME = 20
-    #MAX_BURST_TIME = 50
-    MAX_NICE_VALUE = 10
+    SCHED_LATENCY = 5000
+    MAX_NICE_VALUE = 39 # proxy value for 20
+    MIN_NICE_VALUE = 0 # proxy value for -20
+    min_granularity = 6
 
-    N = int(input("Enter number of tasks: "))
-    TASKS = []
+    N = 4
+    NORMAL_TASKS = []
+    MODIFIED_TASKS = []
     file_path = "output.txt"
 
     # Initialize an empty list to store the values
-    bs = []
-    with open('output.txt', 'r') as file:
-        for line in file:
-            if line.startswith('pred'):
-                b = float(line.split(':')[1].strip())
-                bs.append(b)
-    # print(bs)
-    # Print the list of values
-    # print(values)
-    ata = [4.00, 2.000, 4.000,3,2,1,4,5]
+    sched_data = pd.read_csv('sched_data.csv')
+    arrival_time = numpy.random.randint(0, 1000, len(sched_data))
 
-    # print('Enter ID, arrival time, burst time, nice value of processes:')
-    # print('(Times should be in milliseconds)')
-    for i in range(N):
-        # pid, at, bt, nice = tuple(int(x) for x in input().split())
-        pid, at, bt, nice = (
+    for i in range(len(sched_data)):
+        pid, at, nice = (
             random.randint(1, N * N),
-            ata[i],
-            #random.randint(0, MAX_ARRIVAL_TIME),
-            #ata[i],
-            #random.randint(0, MAX_BURST_TIME),
-            bs[i],
-            random.randint(1, MAX_NICE_VALUE),
+            arrival_time[i],
+            random.randint(MIN_NICE_VALUE, MAX_NICE_VALUE),
         )
-        #print(bt)
-        TASKS.append(
+        NORMAL_TASKS.append(
             {
                 "pid": pid,
                 "arrival_time": at,
-                "burst_time": bt,
+                "burst_time": sched_data["actual_cpu_time"][i],
+                "nice": nice,
+                "vruntime": 0,
+                "exec_time": 0,
+                "waiting_time": 0,
+                "turnaround_time": 0,
+            }
+        )
+        MODIFIED_TASKS.append(
+            {
+                "pid": pid,
+                "arrival_time": at,
+                "burst_time": sched_data["actual_cpu_time"][i],
+                "pred_burst_time": sched_data["predicted_cpu_time"][i],
                 "nice": nice,
                 "vruntime": 0,
                 "exec_time": 0,
@@ -199,11 +234,18 @@ if __name__ == "__main__":
         )
 
     # Sort tasks by arrival time
-    TASKS_SORTED = SortedKeyList(TASKS, key=lambda task: task["arrival_time"])
+    NORMAL_TASKS_SORTED = SortedKeyList(NORMAL_TASKS, key=lambda task: task["arrival_time"])
+
+    MODIFIED_TASKS_SORTED = SortedKeyList(MODIFIED_TASKS, key=lambda task: task["arrival_time"])
 
     # Schedule tasks according to CFS algorithm and print average times
-    reset_tasks(TASKS_SORTED)
-    cfs_schedule(TASKS_SORTED, QUANTUM)
-    print("\n**************** CFS SCHEDULING ****************")
-    display_tasks(TASKS)
-    find_avg_time(TASKS)
+    # reset_tasks(TASKS_SORTED) # might be removable
+    normal_cfs_schedule(NORMAL_TASKS_SORTED, SCHED_LATENCY, min_granularity)
+    print("\n**************** NORMAL CFS SCHEDULING ****************")
+    display_tasks(NORMAL_TASKS_SORTED)
+    find_avg_time(NORMAL_TASKS_SORTED)
+
+    modified_cfs_schedule(MODIFIED_TASKS_SORTED, SCHED_LATENCY, min_granularity)
+    print("\n**************** MODIFIED CFS SCHEDULING ****************")
+    display_tasks(MODIFIED_TASKS_SORTED)
+    find_avg_time(MODIFIED_TASKS_SORTED)
