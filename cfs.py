@@ -8,6 +8,7 @@ import random
 import sys
 from math import floor
 from typing import Callable, List
+import time
 
 import numpy
 import pandas as pd
@@ -27,6 +28,7 @@ priority_to_weight = [
 
 Sum_Of_Weights = 445163
 
+
 def modified_cfs_schedule(tasks: List[dict], sched_latency: int, min_granularity=6):
     """
     Schedule tasks according to CFS algorithm and set waiting and turnaround times.
@@ -39,36 +41,40 @@ def modified_cfs_schedule(tasks: List[dict], sched_latency: int, min_granularity
     for i in tasks:
         tasks_sorted.add(i)
     min_vruntime = 0
-
     while (num := len(tasks_sorted)) > 0:
         min_task = tasks_sorted[0]
         min_vruntime = get_vruntime(min_task)
         min_nice = get_nice(min_task)
         # print(min_task)
 
-        timeslice = (priority_to_weight[min_nice] * sched_latency) / Sum_Of_Weights
-        if(timeslice < min_granularity):
-            timeslice = min_granularity 
+        timeslice = (priority_to_weight[min_nice]
+                     * sched_latency) / Sum_Of_Weights
+        if (timeslice < min_granularity):
+            timeslice = min_granularity
 
         t_rem = min_task["burst_time"] - min_task["exec_time"]
-        t_rem_pred = min_task["pred_burst_time"] - min_task["exec_time"]
-        if t_rem_pred <= t_rem and t_rem_pred > 0:
-            t_rem = t_rem_pred
         # Time of execution of smallest task
-        time = min([timeslice, t_rem])
-        
-        global_timer += time
+        time_sched = min([timeslice, t_rem])
+        if (min_task["pred_burst_time"] < min_task["burst_time"]):
+            if (min_task["pred_burst_time"] - min_task["exec_time"] > 0):
+                if (min_task["exec_time"] + time_sched < min_task["pred_burst_time"]):
+                    if (min_task["pred_burst_time"] - min_task["exec_time"] - time_sched <= timeslice):
+                        time_sched = min_task["pred_burst_time"] - \
+                            min_task["exec_time"]
+
+        global_timer += time_sched
 
         # Execute process
-        vruntime = min_vruntime + ((time * 1024) / priority_to_weight[min_nice])
-        min_task["exec_time"] += time
-        min_task["turnaround_time"] += time
+        vruntime = min_vruntime + \
+            ((time_sched * 1024) / priority_to_weight[min_nice])
+        min_task["exec_time"] += time_sched
+        min_task["turnaround_time"] += time_sched
 
         # Increment waiting and turnaround time of all other processes
         for i in range(1, num):
-            if(global_timer >= tasks_sorted[i]["arrival_time"]):
-                tasks_sorted[i]["waiting_time"] += time
-                tasks_sorted[i]["turnaround_time"] += time
+            if (global_timer >= tasks_sorted[i]["arrival_time"]):
+                tasks_sorted[i]["waiting_time"] += time_sched
+                tasks_sorted[i]["turnaround_time"] += time_sched
 
         # Remove from sorted list and update vruntime
         task = tasks_sorted.pop(0)
@@ -77,6 +83,12 @@ def modified_cfs_schedule(tasks: List[dict], sched_latency: int, min_granularity
         # Insert only if execution time is left
         if min_task["exec_time"] < min_task["burst_time"]:
             tasks_sorted.add(task)
+
+        # Adding Context Switch Delay Time Period
+        for i in range(0, len(tasks_sorted)):
+            tasks_sorted[i]["waiting_time"] += 100
+            tasks_sorted[i]["turnaround_time"] += 100
+
 
 def normal_cfs_schedule(tasks: List[dict], sched_latency: int, min_granularity=6):
     """
@@ -97,26 +109,28 @@ def normal_cfs_schedule(tasks: List[dict], sched_latency: int, min_granularity=6
         min_nice = get_nice(min_task)
         # print(min_task)
 
-        timeslice = (priority_to_weight[min_nice] * sched_latency) / Sum_Of_Weights
-        if(timeslice < min_granularity):
-            timeslice = min_granularity 
+        timeslice = (priority_to_weight[min_nice]
+                     * sched_latency) / Sum_Of_Weights
+        if (timeslice < min_granularity):
+            timeslice = min_granularity
 
         t_rem = min_task["burst_time"] - min_task["exec_time"]
 
         # Time of execution of smallest task
-        time = min([timeslice, t_rem])
-        global_timer += time
+        time_sched = min([timeslice, t_rem])
+        global_timer += time_sched
 
         # Execute process
-        vruntime = min_vruntime + ((time * 1024) / priority_to_weight[min_nice])
-        min_task["exec_time"] += time
-        min_task["turnaround_time"] += time
+        vruntime = min_vruntime + \
+            ((time_sched * 1024) / priority_to_weight[min_nice])
+        min_task["exec_time"] += time_sched
+        min_task["turnaround_time"] += time_sched
 
         # Increment waiting and turnaround time of all other processes
         for i in range(1, num):
-            if(global_timer >= tasks_sorted[i]["arrival_time"]):
-                tasks_sorted[i]["waiting_time"] += time
-                tasks_sorted[i]["turnaround_time"] += time
+            if (global_timer >= tasks_sorted[i]["arrival_time"]):
+                tasks_sorted[i]["waiting_time"] += time_sched
+                tasks_sorted[i]["turnaround_time"] += time_sched
 
         # Remove from sorted list and update vruntime
         task = tasks_sorted.pop(0)
@@ -126,6 +140,10 @@ def normal_cfs_schedule(tasks: List[dict], sched_latency: int, min_granularity=6
         if min_task["exec_time"] < min_task["burst_time"]:
             tasks_sorted.add(task)
 
+        # Adding Context Switch Delay Time Period
+        for i in range(0, len(tasks_sorted)):
+            tasks_sorted[i]["waiting_time"] += 100
+            tasks_sorted[i]["turnaround_time"] += 100
 
 
 def display_tasks(tasks: List[dict]):
@@ -156,7 +174,8 @@ def display_tasks(tasks: List[dict]):
         )
     print(
         "\n"
-        + tabulate(tasks_mat, headers=headers, tablefmt="fancy_grid", floatfmt=".3f")
+        + tabulate(tasks_mat, headers=headers,
+                   tablefmt="fancy_grid", floatfmt=".3f")
     )
     # print('\n' + tabulate(tasks, headers='keys', tablefmt='fancy_grid'))
 
@@ -179,6 +198,7 @@ def find_avg_time(tasks: List[dict]):
     print(f"\nAverage waiting time: {total_wt / (num * 1000): .3f} seconds")
     print(f"Average turnaround time: {total_tat / (num * 1000): .3f} seconds")
 
+
 if __name__ == "__main__":
     MIN_VERSION = (3, 8)
     if not sys.version_info >= MIN_VERSION:
@@ -188,11 +208,10 @@ if __name__ == "__main__":
         )
 
     SCHED_LATENCY = 5000
-    MAX_NICE_VALUE = 39 # proxy value for 20
-    MIN_NICE_VALUE = 0 # proxy value for -20
+    MAX_NICE_VALUE = 39  # proxy value for 20
+    MIN_NICE_VALUE = 0  # proxy value for -20
     min_granularity = 6
 
-    N = 4
     NORMAL_TASKS = []
     MODIFIED_TASKS = []
     file_path = "output.txt"
@@ -203,7 +222,7 @@ if __name__ == "__main__":
 
     for i in range(len(sched_data)):
         pid, at, nice = (
-            random.randint(1, N * N),
+            random.randint(1, 1000),
             arrival_time[i],
             random.randint(MIN_NICE_VALUE, MAX_NICE_VALUE),
         )
@@ -234,9 +253,11 @@ if __name__ == "__main__":
         )
 
     # Sort tasks by arrival time
-    NORMAL_TASKS_SORTED = SortedKeyList(NORMAL_TASKS, key=lambda task: task["arrival_time"])
+    NORMAL_TASKS_SORTED = SortedKeyList(
+        NORMAL_TASKS, key=lambda task: task["arrival_time"])
 
-    MODIFIED_TASKS_SORTED = SortedKeyList(MODIFIED_TASKS, key=lambda task: task["arrival_time"])
+    MODIFIED_TASKS_SORTED = SortedKeyList(
+        MODIFIED_TASKS, key=lambda task: task["arrival_time"])
 
     # Schedule tasks according to CFS algorithm and print average times
     # reset_tasks(TASKS_SORTED) # might be removable
@@ -245,7 +266,8 @@ if __name__ == "__main__":
     display_tasks(NORMAL_TASKS_SORTED)
     find_avg_time(NORMAL_TASKS_SORTED)
 
-    modified_cfs_schedule(MODIFIED_TASKS_SORTED, SCHED_LATENCY, min_granularity)
+    modified_cfs_schedule(MODIFIED_TASKS_SORTED,
+                          SCHED_LATENCY, min_granularity)
     print("\n**************** MODIFIED CFS SCHEDULING ****************")
     display_tasks(MODIFIED_TASKS_SORTED)
     find_avg_time(MODIFIED_TASKS_SORTED)
