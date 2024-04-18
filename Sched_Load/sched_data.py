@@ -1,4 +1,4 @@
-from load_sched import load_sched
+from Sched_Load.load_sched import load_sched
 import pickle
 import pandas as pd
 import random
@@ -26,4 +26,4 @@ def get_scheduler_data(num_proc=10):
     pd.DataFrame(df).to_csv("sched_data.csv")
 
 
-get_scheduler_data(100)
+get_scheduler_data()

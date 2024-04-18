@@ -6,9 +6,7 @@ Program to simulate Completely Fair Scheduler (CFS).
 
 import random
 import sys
-from math import floor
 from typing import Callable, List
-import time
 
 import numpy
 import pandas as pd
