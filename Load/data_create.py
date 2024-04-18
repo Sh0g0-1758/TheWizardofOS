@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from load import load
+from Load.load import load
 for i in range(200):
     load("./Benchmarks/CPU/ml.exe")
     load("./Benchmarks/CPU/matmul.exe")
