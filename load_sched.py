@@ -1,7 +1,7 @@
 import psutil
 import time
 
-def load(path):
+def load_sched(path):
     vals = { "CPU times":[], "RSS memory":[],"VMS memory":[], "Shared memory":[], "Text segment":[], 
             "Data segment":[], "Memory Percent":[]}
 
