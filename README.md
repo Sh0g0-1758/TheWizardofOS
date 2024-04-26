@@ -7,6 +7,7 @@ The motivation for this project came from our Ubuntu 22.04LTS crashing on variou
 We went through multiple research papers but most of them neither had credible results to show nor had any code as their proof of work. The approach we use here relies on the fact that processes that are about to be finished should be let finished. 
 
 We present a CFS scheduling visualisation in python which uses the data from our ML engine to make decisions regarding making a context switch or not. We explored various ML algos based on their accuracy and overhead introduced including decision trees, random forests, xgboost. We settled on random forest because it gave the best accuracy in limited time.
+Our ML algorithm predicts the burst time of a process to find out time remaining for it to finish execution. If it is small enough, we let it finish running to reduce unnecessary context switches.
 
 Our algorithm gives an optimisation for nearly 90% of the randomized nice value processes that we use for testing. Here are the results : 
 
