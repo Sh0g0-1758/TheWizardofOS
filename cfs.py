@@ -195,7 +195,8 @@ def find_avg_time(tasks: List[dict]):
 
     print(f"\nAverage waiting time: {total_wt / (num * 1000): .3f} seconds")
     print(f"Average turnaround time: {total_tat / (num * 1000): .3f} seconds")
-    #print(f"Average response time: {total_resp / (num * 1000): .3f} seconds")
+    ### TODO: Calculate the response time as a metric
+
 
 if __name__ == "__main__":
     MIN_VERSION = (3, 8)
@@ -269,5 +270,3 @@ if __name__ == "__main__":
     print("\n**************** MODIFIED CFS SCHEDULING ****************")
     display_tasks(MODIFIED_TASKS_SORTED)
     find_avg_time(MODIFIED_TASKS_SORTED)
-
-    
