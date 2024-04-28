@@ -13,6 +13,7 @@ import pandas as pd
 from sortedcontainers import SortedKeyList
 from tabulate import tabulate
 
+#weights corresponding to nice values  from -19 to +20
 priority_to_weight = [
     88761, 71755, 56483, 46273, 36291,
     29154, 23254, 18705, 14949, 11916,
@@ -35,6 +36,7 @@ def modified_cfs_schedule(tasks: List[dict], sched_latency: int, min_granularity
     get_vruntime: Callable[[dict], int] = lambda task: task["vruntime"]
     get_nice: Callable[[dict], int] = lambda task: task["nice"]
     global_timer = 0
+    #here we are sorting the task using sorted key list. Original cfs algorithm maintains a red black tree.
     tasks_sorted = SortedKeyList(key=get_vruntime)
     for i in tasks:
         tasks_sorted.add(i)
