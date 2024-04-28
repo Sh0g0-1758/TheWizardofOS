@@ -121,6 +121,7 @@ def normal_cfs_schedule(tasks: List[dict], sched_latency: int, min_granularity=6
         # Execute process
         vruntime = min_vruntime + \
             ((time_sched * 1024) / priority_to_weight[min_nice])
+        #increase the executed time of process
         min_task["exec_time"] += time_sched
         min_task["turnaround_time"] += time_sched
 
